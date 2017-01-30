@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 font = cv2.FONT_HERSHEY_SIMPLEX
-eyeCloseFlag = True
 # import face and eye classifier xml files
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml')
@@ -49,14 +48,11 @@ while True:
 				center = cv2.moments(largeBlob)
 				cx,cy = int(center['m10']/center['m00']), int(center['m01']/center['m00'])
 				cv2.circle(eyeImg_color,(cx,cy),5,(0,0,255),-1)
-				eyeCloseFlag = False
+				cv2.drawContours(eyeImg_color, largeBlob, -1, (0,0,255), 2)
+				# epsilon = 0.1*cv2.arcLength(largeBlob,True)
+				# approx = cv2.approxPolyDP(largeBlob,epsilon,True)
+				# cv2.drawContours(eyeImg_color, approx, -1, (0,0,255), 2)
 
-		if len(eyes)<2:
-			eyeCloseFlag = True
-	if eyeCloseFlag==False and len(faces)>0:
-		cv2.putText(img, 'Eye Open', (10,500), font, 3,(255,0,0),2)
-	elif eyeCloseFlag==True and len(faces)>0:
-		cv2.putText(img, 'Eye Closed', (10,500), font, 3,(0,0,255),2)
 	# show the screen
 	cv2.imshow('img', img)
 	# stop by pressing esc
