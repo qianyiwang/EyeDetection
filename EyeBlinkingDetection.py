@@ -7,6 +7,7 @@ face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml')
 # implement the camera
 cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture('qianyi_Sub_1_Drive_4.mpg')
 windowClose = np.ones((5,5),np.uint8)
 windowOpen = np.ones((2,2),np.uint8)
 windowErode = np.ones((2,2),np.uint8)
