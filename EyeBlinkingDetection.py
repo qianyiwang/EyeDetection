@@ -2,28 +2,32 @@ import cv2
 import numpy as np
 import thread
 import time
+
 font = cv2.FONT_HERSHEY_SIMPLEX
-eyeCloseFlag = False
-countFlag = False
-eyeCloseCount = 0
 # import face and eye classifier xml files
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml')
 # implement the camera
-cap = cv2.VideoCapture('qianyiWang_Sub_1_Drive_1.mpg')
+cap = cv2.VideoCapture('AsharmaMetro_Sub_1_Drive_1.mpg')
 # cap = cv2.VideoCapture(0)
 windowClose = np.ones((5,5),np.uint8)
 windowOpen = np.ones((2,2),np.uint8)
 windowErode = np.ones((2,2),np.uint8)
 lastEyeArea = 0
 lastEyePerimeter = 0
+eyeCloseFlag = False
+last_eyeCloseFlag = False
 
 Time = ''
 millis = 0
 EndTime = 0
 StartTime = int(round(time.time() * 1000))
-eyeCloseTime = StartTime
+eyeCloseTime = 0
 EyeCloseTime = 0
+
+timeStemp = 0
+last_timeStemp = 0
+openCount = 0
 
 def touchEdge(pupilArr, eyeArr):
 	for arr in pupilArr:
@@ -34,8 +38,8 @@ def touchEdge(pupilArr, eyeArr):
 
 # def record_time():
 # 	while True:
-# 		Time = time.ctime(time.time())
-# 		millis = int(round(time.time() * 1000))
+# 		# Time = time.ctime(time.time())
+# 		timeStemp = int(round(time.time() * 1000))
 # 		# print Time, millis
 # 		time.sleep(1)
 
@@ -50,6 +54,7 @@ while True:
 	faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 	# draw rectangle around faces
 	for (x, y, w, h) in faces:
+		timeStemp = int(round(time.time() * 1000))
 		cv2.rectangle(img, (x,y), (x+w,y+h), (255,0,0), 2)
 		roi_gray = gray[y:y+h, x:x+w]
 		roi_color = img[y:y+h, x:x+w]
@@ -70,12 +75,6 @@ while True:
 				pupilFrame = cv2.morphologyEx(pupilFrame, cv2.MORPH_OPEN, windowOpen)
 				#now we find the biggest blob and get the centriod
 				threshold = cv2.inRange(pupilFrame,250,255) #get the blobs
-				# edges = cv2.Canny(threshold,100,200)
-				# cv2.imshow('edges',edges)
-				# contours, hierarchy = cv2.findContours(edges,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
-				# if len(contours)>0:
-				# 	cv2.drawContours(eyeImg_color, contours[0], -1, (0,0,255), 2)
-				# print len(contours)
 				contours, hierarchy = cv2.findContours(threshold,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 				if touchEdge(contours[0], eyeImg_color)==False:
 					cv2.drawContours(eyeImg_color, contours[0], -1, (0,0,255), 2)
@@ -83,37 +82,43 @@ while True:
 					area = cv2.contourArea(contours[0])
 					perimeter = cv2.arcLength(contours[0],True)
 					if abs(area-lastEyeArea)>350:
-						# print area-lastEyeArea, perimeter-lastEyePerimeter
 						eyeCloseFlag = True
-						if int(round(time.time() * 1000)) - eyeCloseTime > 1500:
-							eyeCloseTime = int(round(time.time() * 1000))
-							print 'eye close at', time.ctime(time.time())
+						openCount = 0
+						if last_timeStemp!=0 and eyeCloseFlag==last_eyeCloseFlag:
+							eyeCloseTime = eyeCloseTime + timeStemp - last_timeStemp
+							print 'eye close'
+					
 					lastEyeArea = area
 					lastEyePerimeter = perimeter
 
 
 		if len(eyes)<2:
 			eyeCloseFlag = True
-			if int(round(time.time() * 1000)) - eyeCloseTime > 1500:
-				eyeCloseTime = int(round(time.time() * 1000))
-				print 'eye close at', time.ctime(time.time())
-	if eyeCloseFlag==False and len(faces)==1:
-		# cv2.putText(img, 'Eye Open', (10,500), font, 3,(255,0,0),4)
-		if countFlag==False:
-			countFlag = True
-			if int(round(time.time() * 1000))-eyeCloseTime>500:
-				EyeCloseTime = EyeCloseTime + int(round(time.time() * 1000))-eyeCloseTime
+			openCount = 0
+			if last_timeStemp!=0 and eyeCloseFlag==last_eyeCloseFlag:
+				eyeCloseTime = eyeCloseTime + timeStemp - last_timeStemp
+				print 'eye close'
+	if eyeCloseFlag == False:
+		openCount = openCount+1
+		if openCount>3:
+			if eyeCloseTime>500:
+				EyeCloseTime = EyeCloseTime+eyeCloseTime
+			eyeCloseTime = 0
+	# else:
+	# 	if eyeCloseTime>500:
+	# 		EyeCloseTime = EyeCloseTime+eyeCloseTime
 
-	elif eyeCloseFlag==True and len(faces)==1:
-		# cv2.putText(img, 'Eye Closed', (10,500), font, 3,(0,0,255),4)
-		if countFlag==True:
-			eyeCloseCount=eyeCloseCount+1
-			# print eyeCloseCount
-			countFlag = False
+	if eyeCloseTime!=0:
+		print eyeCloseTime
 	cv2.putText(img, str(EyeCloseTime), (10,400), font, 2,(255,0,0),4)
-	cv2.putText(img, str(abs(float(EyeCloseTime)/float(int(round(time.time() * 1000)) - StartTime))), (10,500), font, 2,(255,0,0),4)
+	cv2.putText(img, str(float(int(round(time.time() * 1000)) - StartTime)), (10,450), font, 2,(255,0,0),4)
+	
+	cv2.putText(img, str(float(EyeCloseTime)/float(int(round(time.time() * 1000)) - StartTime)), (10,500), font, 2,(255,0,0),4)
+	if float(int(round(time.time() * 1000)) - StartTime) > 90000:
+		break
+	last_eyeCloseFlag = eyeCloseFlag
+	last_timeStemp = timeStemp
 	eyeCloseFlag = False
-
 	# show the screen
 	cv2.imshow('img', img)
 	# stop by pressing esc
@@ -123,6 +128,6 @@ while True:
 		break
 print 'total time', EndTime - StartTime
 print 'total eye close time', EyeCloseTime
-print 'eye close ratio', float(EyeCloseTime)/float(EndTime - StartTime)
+print 'eye close ratio', float(EyeCloseTime)/float(int(round(time.time() * 1000)) - StartTime)
 cap.release()
 cv2.destroyAllWindows()
