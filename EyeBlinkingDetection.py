@@ -11,29 +11,6 @@ cap = cv2.VideoCapture(0)
 windowClose = np.ones((5,5),np.uint8)
 windowOpen = np.ones((2,2),np.uint8)
 windowErode = np.ones((2,2),np.uint8)
-# Setup SimpleBlobDetector parameters.
-params = cv2.SimpleBlobDetector_Params()
-# Change thresholds
-# params.minThreshold = 10;
-# params.maxThreshold = 200;
- 
-# Filter by Area.
-params.filterByArea = True
-params.minArea = 500.0;
-# params.maxArea = 1500.0;
- 
-# Filter by Circularity
-# params.filterByCircularity = True
-# params.minCircularity = 0.1
- 
-# Filter by Convexity
-# params.filterByConvexity = True
-# params.minConvexity = 1
- 
-# Filter by Inertia
-# params.filterByInertia = True
-# params.minInertiaRatio = 0.01
-detector = cv2.SimpleBlobDetector(params)
 while True:
 	ret, img = cap.read()
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -57,15 +34,29 @@ while True:
 			pupilFrame = cv2.morphologyEx(pupilFrame, cv2.MORPH_CLOSE, windowClose)
 			pupilFrame = cv2.morphologyEx(pupilFrame, cv2.MORPH_ERODE, windowErode)
 			pupilFrame = cv2.morphologyEx(pupilFrame, cv2.MORPH_OPEN, windowOpen)
-			#now we find the biggest blob and get the centriod
-			blobs = detector.detect(pupilFrame)
-			# Draw detected blobs as red circles.
-			im_with_blobs = cv2.drawKeypoints(eyeImg_color, blobs, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+			mask = cv2.inRange(pupilFrame, 250, 255)
+			res = cv2.bitwise_and(pupilFrame, pupilFrame, mask = mask)
+			mask = cv2.dilate(mask, None, iterations=1)
+			params = cv2.SimpleBlobDetector_Params()
+			params.filterByArea = True
+			params.minArea = 30
+			params.filterByCircularity = True
+			params.minCircularity = 0.1
+			params.filterByConvexity = True
+			params.minConvexity = 0.5
+			params.filterByInertia =True
+			params.minInertiaRatio = 0.5
+			detector = cv2.SimpleBlobDetector(params)
+			reversemask=255-mask
+			keypoints = detector.detect(reversemask)
+			im_with_keypoints = cv2.drawKeypoints(eyeImg_color, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+			cv2.imshow("Keypoints", im_with_keypoints)
+			
 
 			
 	# show the screen
-	cv2.imshow('img', img)
-	cv2.imshow('im_with_blobs',im_with_blobs)
+	# cv2.imshow('img', keypoints)
+	# cv2.imshow('im_with_blobs',im_with_blobs)
 	# stop by pressing esc
 	k = cv2.waitKey(30) & 0xff
 	if k==27:
